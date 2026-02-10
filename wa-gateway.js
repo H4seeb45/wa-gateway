@@ -36,12 +36,15 @@ const initWhatsApp = (schoolId) => {
     ];
 
     lockFiles.forEach(file => {
-        if (fs.existsSync(file)) {
-            try {
+        try {
+            if (fs.existsSync(file) || fs.lstatSync(file).isSymbolicLink()) {
                 fs.unlinkSync(file);
-                console.log(`[Zafeen Lyceum] Cleared stale lock: ${file}`);
-            } catch (e) {
-                console.error(`[Zafeen Lyceum] Could not clear lock ${file}:`, e.message);
+                console.log(`[Zafeen Lyceum] UNLOCKED: ${file}`);
+            }
+        } catch (e) {
+            // Log only if it's not a "file not found" error
+            if (e.code !== 'ENOENT') {
+                console.error(`[Zafeen Lyceum] Lock clear failed for ${file}:`, e.message);
             }
         }
     });
