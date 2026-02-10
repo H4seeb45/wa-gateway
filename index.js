@@ -279,6 +279,15 @@ app.get('/', (req, res) => {
     res.send(dashboardHTML);
 });
 
+// Health Check for Railway
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: 'UP',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Initialize WhatsApp for a school
 app.post('/api/init', (req, res) => {
     const { schoolId } = req.body;
