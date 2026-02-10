@@ -32,6 +32,7 @@
     }
   },
   "deploy": {
+    "requiredMountPath": "/data",
     "startCommand": "node index.js",
     "restartPolicyType": "ON_FAILURE",
     "healthcheckPath": "/api/health",

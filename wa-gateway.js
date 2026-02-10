@@ -22,14 +22,13 @@ const initWhatsApp = (schoolId) => {
         return schools.get(schoolId).client;
     }
     
-    
     console.log(`[Zafeen Lyceum] Initializing WhatsApp: ${schoolId}`);
     console.log(`[Zafeen Lyceum] Pupeteer Path from env: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
 
     const client = new Client({
         authStrategy: new LocalAuth({ 
             clientId: schoolId,
-            dataPath: "/app/.wwebjs_auth" 
+            dataPath: "/data/.wwebjs_auth" 
         }),
         puppeteer: {
             headless: 'shell',
