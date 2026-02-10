@@ -13,9 +13,19 @@
             "nspr",
             "atk",
             "at-spi2-atk",
+            "at-spi2-core",
             "libdrm",
             "mesa",
-            "gtk3"
+            "gtk3",
+            "cairo",
+            "pango",
+            "alsa-lib",
+            "dbus"
+          ]
+        },
+        "postbuild": {
+          "cmds": [
+            "mkdir -p /usr/bin && ln -s $(which chromium) /usr/bin/chromium"
           ]
         }
       }

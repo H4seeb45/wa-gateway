@@ -21,33 +21,20 @@ const initWhatsApp = (schoolId) => {
     if (schools.has(schoolId)) {
         return schools.get(schoolId).client;
     }
-
-    // Use absolute path for Railway volume compatibility
-    const dataPath = process.env.WHATSAPP_DATA_PATH || '/app/.wwebjs_auth';
     
-    // Detect system chromium paths on Linux
-    let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    if (!executablePath && process.platform === 'linux') {
-        const potentialPaths = [
-            '/usr/bin/chromium',
-            '/usr/bin/chromium-browser',
-            '/usr/bin/google-chrome-stable'
-        ];
-        executablePath = potentialPaths.find(path => fs.existsSync(path));
-    }
     
     console.log(`[Zafeen Lyceum] Initializing WhatsApp: ${schoolId}`);
-    console.log(`[Zafeen Lyceum] Executable: ${executablePath || 'Default (Bundled)'}`);
-    console.log(`[Zafeen Lyceum] Data Path: ${dataPath}`);
+    console.log(`[Zafeen Lyceum] Pupeteer Path from env: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
 
     const client = new Client({
         authStrategy: new LocalAuth({ 
             clientId: schoolId,
-            dataPath: dataPath 
+            dataPath: "/app/.wwebjs_auth" 
         }),
         puppeteer: {
             headless: 'shell',
-            executablePath: executablePath,
+            // Fallback to Puppeteer's internal path if local, use env var on Railway
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
