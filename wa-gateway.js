@@ -5,6 +5,8 @@
 
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const fs = require('fs');
+const path = require('path');
+
 
 // Store multiple school instances in a Map
 // Key: schoolId, Value: { client, qrCode, isReady }
@@ -23,12 +25,33 @@ const initWhatsApp = (schoolId) => {
     }
     
     console.log(`[Zafeen Lyceum] Initializing WhatsApp: ${schoolId}`);
+    
+    // 1. CLEAR STALE LOCKS (Fixes "Profile in use" error)
+    const sessionDir = path.join("/data/.wwebjs_auth", `session-${schoolId}`);
+    const lockFiles = [
+        path.join(sessionDir, 'SingletonLock'),
+        path.join(sessionDir, 'Default', 'SingletonLock'),
+        path.join(sessionDir, 'SingletonCookie'),
+        path.join(sessionDir, 'SingletonSocket')
+    ];
+
+    lockFiles.forEach(file => {
+        if (fs.existsSync(file)) {
+            try {
+                fs.unlinkSync(file);
+                console.log(`[Zafeen Lyceum] Cleared stale lock: ${file}`);
+            } catch (e) {
+                console.error(`[Zafeen Lyceum] Could not clear lock ${file}:`, e.message);
+            }
+        }
+    });
+
     console.log(`[Zafeen Lyceum] Pupeteer Path from env: ${process.env.PUPPETEER_EXECUTABLE_PATH}`);
 
     const client = new Client({
         authStrategy: new LocalAuth({ 
             clientId: schoolId,
-            dataPath: "/data/.wwebjs_auth" 
+            dataPath: "/data/.wwebjs_auth"
         }),
         puppeteer: {
             headless: 'shell',

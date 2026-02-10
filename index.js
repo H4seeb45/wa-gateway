@@ -340,3 +340,15 @@ app.listen(PORT, () => {
     console.log(`\n[Zafeen Lyceum] Gateway running at http://localhost:${PORT}`);
     console.log(`[Zafeen Lyceum] Environment: Multi-Tenant Singleton ready.\n`);
 });
+
+// Graceful Shutdown for Railway
+const shutdown = () => {
+    console.log('\n[Zafeen Lyceum] Signal received. Shutting down gracefully...');
+    // We exit and let Railway restart the process
+    // The wa-gateway.js init will handle clearing locks on next start
+    process.exit(0);
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);
+
