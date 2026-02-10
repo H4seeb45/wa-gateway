@@ -15,7 +15,27 @@
             "at-spi2-atk",
             "libdrm",
             "mesa",
-            "gtk3"
+            "gtk3",
+            "pango",
+            "cairo",
+            "libX11",
+            "libXcomposite",
+            "libXcursor",
+            "libXdamage",
+            "libXext",
+            "libXfixes",
+            "libXi",
+            "libXrandr",
+            "libXrender",
+            "libXss",
+            "libXtst",
+            "fontconfig",
+            "freetype",
+            "libxcb",
+            "libuuid",
+            "expat",
+            "dbus",
+            "alsa-lib"
           ]
         }
       }
@@ -25,6 +45,10 @@
     "startCommand": "node index.js",
     "restartPolicyType": "ON_FAILURE",
     "healthcheckPath": "/api/health",
-    "healthcheckTimeout": 300
+    "healthcheckTimeout": 300,
+    "env": {
+      "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",
+      "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium"
+    }
   }
 }
