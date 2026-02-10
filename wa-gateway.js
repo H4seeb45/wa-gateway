@@ -4,6 +4,7 @@
  */
 
 const { Client, LocalAuth } = require('whatsapp-web.js');
+const fs = require('fs');
 
 // Store multiple school instances in a Map
 // Key: schoolId, Value: { client, qrCode, isReady }
@@ -21,16 +22,32 @@ const initWhatsApp = (schoolId) => {
         return schools.get(schoolId).client;
     }
 
-    console.log(`[Zafeen Lyceum] Initializing WhatsApp for School: ${schoolId}`);
+    // Use absolute path for Railway volume compatibility
+    const dataPath = process.env.WHATSAPP_DATA_PATH || '/app/.wwebjs_auth';
+    
+    // Detect system chromium paths on Linux
+    let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    if (!executablePath && process.platform === 'linux') {
+        const potentialPaths = [
+            '/usr/bin/chromium',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/google-chrome-stable'
+        ];
+        executablePath = potentialPaths.find(path => fs.existsSync(path));
+    }
+    
+    console.log(`[Zafeen Lyceum] Initializing WhatsApp: ${schoolId}`);
+    console.log(`[Zafeen Lyceum] Executable: ${executablePath || 'Default (Bundled)'}`);
+    console.log(`[Zafeen Lyceum] Data Path: ${dataPath}`);
 
     const client = new Client({
-        // Each school gets its own folder inside the persistent volume
         authStrategy: new LocalAuth({ 
             clientId: schoolId,
-            dataPath: './.wwebjs_auth' 
+            dataPath: dataPath 
         }),
         puppeteer: {
             headless: 'shell',
+            executablePath: executablePath,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -99,6 +116,7 @@ async function sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate)
                     `Dear Parent, this is a reminder regarding the school fee for the current month.\n\n` +
                     `*Amount:* PKR ${amount}\n` +
                     `*Due Date:* ${dueDate}\n\n` +
+                    `Fee Voucher is available on the parent portal.\n\n` +
                     `Please ignore if already paid. Thank you.\n` +
                     `_Sent via Zafeen Lyceum_`;
 
