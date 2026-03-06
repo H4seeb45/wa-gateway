@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { initWhatsApp, sendFeeAlert, getStatus } = require('./wa-gateway');
+const { initWhatsApp, sendFeeAlert, sendBroadcastMessage, getStatus } = require('./wa-gateway');
 const QRCode = require('qrcode');
 
 const app = express();
@@ -200,7 +200,11 @@ const dashboardHTML = `
                 </div>
                 <div id="onlineSection" style="display:none">
                     <p style="color: #10b981; font-size: 1.2rem; font-weight: 600;">System is LIVE</p>
-                    <p style="color: #94a3b8; margin-top: 10px;">Ready to send fee alerts.</p>
+                    <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 12px; text-align: left;">
+                        <p style="color: #94a3b8; font-size: 0.9rem;">Queue Status: <span id="queueLen" style="color: white; font-weight: 600;">0</span> pending</p>
+                        <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 5px;">Success: <span id="sentCount" style="color: #10b981; font-weight: 600;">0</span> | Failed: <span id="failCount" style="color: #ef4444; font-weight: 600;">0</span></p>
+                    </div>
+                    <p style="color: #94a3b8; margin-top: 15px; font-size: 0.8rem;"><i>Using Anti-Ban Sequential Queueing</i></p>
                 </div>
             </div>
         </div>
@@ -221,6 +225,9 @@ const dashboardHTML = `
             const qrSection = document.getElementById('qrSection');
             const onlineSection = document.getElementById('onlineSection');
             const qrImage = document.getElementById('qrImage');
+            const queueLen = document.getElementById('queueLen');
+            const sentCount = document.getElementById('sentCount');
+            const failCount = document.getElementById('failCount');
 
             statusArea.style.display = 'block';
             statusBadge.className = 'status-badge status-pending';
@@ -246,7 +253,12 @@ const dashboardHTML = `
                         statusBadge.innerText = 'ONLINE';
                         qrSection.style.display = 'none';
                         onlineSection.style.display = 'block';
-                        clearInterval(poll);
+                        
+                        // Update stats
+                        queueLen.innerText = data.queueLength || 0;
+                        sentCount.innerText = data.stats?.sent || 0;
+                        failCount.innerText = data.stats?.failed || 0;
+                        
                     } else if (data.qrCode) {
                         statusBadge.className = 'status-badge status-pending';
                         statusBadge.innerText = 'AWAITING SCAN';
@@ -330,6 +342,22 @@ app.post('/api/send', async (req, res) => {
 
     try {
         const result = await sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Send Generic Broadcast Message
+app.post('/api/broadcast', async (req, res) => {
+    const { schoolId, phoneNumber, message } = req.body;
+    
+    if (!schoolId || !phoneNumber || !message) {
+        return res.status(400).json({ success: false, error: "Missing required fields: schoolId, phoneNumber, message" });
+    }
+
+    try {
+        const result = await sendBroadcastMessage(schoolId, phoneNumber, message);
         res.json(result);
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
