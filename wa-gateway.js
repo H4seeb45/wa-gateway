@@ -187,7 +187,7 @@ async function processQueue(schoolId) {
 /**
  * Sending Functionality for Multi-Tenant
  */
-async function sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate) {
+async function sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate, schoolName = '') {
     const school = schools.get(schoolId);
 
     if (!school || !school.isReady) {
@@ -196,12 +196,14 @@ async function sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate)
 
     const formattedNumber = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
     
+    const schoolNameText = schoolName ? `*${schoolName}*\n` : '';
     const message = `*FEE ALERT: ${studentName}*\n\n` +
                     `Dear Parent, this is a reminder regarding the school fee for the current month.\n\n` +
                     `*Amount:* PKR ${amount}\n` +
                     `*Due Date:* ${dueDate}\n\n` +
                     `Fee Voucher is available on the parent portal.\n\n` +
                     `Please ignore if already paid. Thank you.\n` +
+                    schoolNameText +
                     `_Sent via Zafeen Lyceum_`;
 
     // Add to queue

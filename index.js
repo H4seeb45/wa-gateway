@@ -334,14 +334,14 @@ app.get('/api/status/:schoolId', async (req, res) => {
 
 // Send Fee Alert
 app.post('/api/send', async (req, res) => {
-    const { schoolId, phoneNumber, studentName, amount, dueDate } = req.body;
+    const { schoolId, phoneNumber, studentName, amount, dueDate, schoolName } = req.body;
     
     if (!schoolId || !phoneNumber || !studentName || !amount || !dueDate) {
         return res.status(400).json({ success: false, error: "Missing required fields" });
     }
 
     try {
-        const result = await sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate);
+        const result = await sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate, schoolName);
         res.json(result);
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
