@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { initWhatsApp, sendFeeAlert, sendBroadcastMessage, getStatus } = require('./wa-gateway');
+const { initWhatsApp, sendFeeAlert, sendBroadcastMessage, getStatus, schools } = require('./wa-gateway');
 const QRCode = require('qrcode');
 
 const app = express();
@@ -296,7 +296,8 @@ app.get('/api/health', (req, res) => {
     res.status(200).json({
         status: 'UP',
         uptime: process.uptime(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        activeClients: schools.size
     });
 });
 
@@ -356,6 +357,7 @@ app.post('/api/broadcast', async (req, res) => {
         return res.status(400).json({ success: false, error: "Missing required fields: schoolId, phoneNumber, message" });
     }
 
+    console.log("Broadcast message request received for schoolId: ", schoolId);
     try {
         const result = await sendBroadcastMessage(schoolId, phoneNumber, message);
         res.json(result);

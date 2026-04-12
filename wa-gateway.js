@@ -9,8 +9,9 @@ const path = require('path');
 
 
 // Store multiple school instances in a Map
-// Key: schoolId, Value: { client, qrCode, isReady, queue, isProcessing, stats }
+// Key: schoolId, Value: { client, qrCode, isReady, queue, isProcessing, stats, lastActivity }
 const schools = new Map();
+const IDLE_TIMEOUT = 15 * 60 * 1000; // 15 minutes
 
 /**
  * Initializes a unique WhatsApp Client for a specific school
@@ -75,7 +76,8 @@ const initWhatsApp = (schoolId) => {
         isReady: false,
         queue: [],
         isProcessing: false,
-        stats: { sent: 0, failed: 0 }
+        stats: { sent: 0, failed: 0 },
+        lastActivity: Date.now()
     });
 
     client.on('qr', (qr) => {
@@ -110,9 +112,42 @@ const initWhatsApp = (schoolId) => {
         schools.delete(schoolId);
     });
 
-    client.initialize();
+    client.initialize().catch(err => {
+        console.error(`[Zafeen Lyceum] Initial initialization failed for ${schoolId}:`, err.message);
+    });
+
     return client;
 };
+
+/**
+ * Activity Tracker Helper
+ */
+const updateActivity = (schoolId) => {
+    const school = schools.get(schoolId);
+    if (school) {
+        school.lastActivity = Date.now();
+    }
+};
+
+/**
+ * Idle Multi-Tenant Cleaner
+ * Periodically checks for inactive clients and destroys them to save RAM
+ */
+setInterval(async () => {
+    const now = Date.now();
+    for (const [schoolId, school] of schools) {
+        // Only idle if queue is empty and time exceeded
+        if (school.queue.length === 0 && (now - school.lastActivity) > IDLE_TIMEOUT) {
+            console.log(`[Zafeen Lyceum] Idling ${schoolId} (Inactive for 15m+)`);
+            try {
+                await school.client.destroy();
+                schools.delete(schoolId);
+            } catch (err) {
+                console.error(`[Zafeen Lyceum] Failed to idle ${schoolId}:`, err.message);
+            }
+        }
+    }
+}, 5 * 60 * 1000); // Check every 5 minutes
 
 /**
  * Queue Processor
@@ -181,6 +216,7 @@ async function processQueue(schoolId) {
     }
 
     school.isProcessing = false;
+    updateActivity(schoolId);
     console.log(`[Queue] Finished processing for ${schoolId}.`);
 }
 
@@ -191,8 +227,17 @@ async function sendFeeAlert(schoolId, phoneNumber, studentName, amount, dueDate,
     const school = schools.get(schoolId);
 
     if (!school || !school.isReady) {
+        // Attempt auto-revive if session exists but map is empty (idled)
+        const sessionDir = path.join("/data/.wwebjs_auth", `session-${schoolId}`);
+        if (!school && fs.existsSync(sessionDir)) {
+             console.log(`[Zafeen Lyceum] Reviving idled session for ${schoolId}...`);
+             initWhatsApp(schoolId);
+             throw new Error(`WhatsApp for ${schoolId} is reviving to save resources. Please try again in 10-20 seconds.`);
+        }
         throw new Error(`WhatsApp for ${schoolId} is not ready or linked.`);
     }
+
+    updateActivity(schoolId);
 
     const formattedNumber = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
     
@@ -225,8 +270,17 @@ async function sendBroadcastMessage(schoolId, phoneNumber, messageText) {
     const school = schools.get(schoolId);
 
     if (!school || !school.isReady) {
+        // Attempt auto-revive if session exists but map is empty (idled)
+        const sessionDir = path.join("/data/.wwebjs_auth", `session-${schoolId}`);
+        if (!school && fs.existsSync(sessionDir)) {
+             console.log(`[Zafeen Lyceum] Reviving idled session for ${schoolId}...`);
+             initWhatsApp(schoolId);
+             throw new Error(`WhatsApp for ${schoolId} is reviving to save resources. Please try again in 10-20 seconds.`);
+        }
         throw new Error(`WhatsApp for ${schoolId} is not ready or linked.`);
     }
+
+    updateActivity(schoolId);
 
     const formattedNumber = phoneNumber.includes('@c.us') ? phoneNumber : `${phoneNumber}@c.us`;
     
@@ -247,20 +301,30 @@ async function sendBroadcastMessage(schoolId, phoneNumber, messageText) {
  */
 const getStatus = (schoolId) => {
     const school = schools.get(schoolId);
-    if (!school) return { exists: false, isReady: false, qrCode: null };
+    if (school) {
+        updateActivity(schoolId);
+        return {
+            exists: true,
+            isReady: school.isReady,
+            qrCode: school.qrCode,
+            queueLength: school.queue.length,
+            stats: school.stats
+        };
+    }
+
+    // Check if it's an idled session
+    const sessionDir = path.join("/data/.wwebjs_auth", `session-${schoolId}`);
+    if (fs.existsSync(sessionDir)) {
+        return { exists: true, isReady: false, status: 'IDLE', message: 'Session exists but is currently offline to save resources' };
+    }
     
-    return {
-        exists: true,
-        isReady: school.isReady,
-        qrCode: school.qrCode,
-        queueLength: school.queue.length,
-        stats: school.stats
-    };
+    return { exists: false, isReady: false, qrCode: null };
 };
 
 module.exports = { 
     initWhatsApp, 
     sendFeeAlert, 
     sendBroadcastMessage,
-    getStatus 
+    getStatus,
+    schools 
 };
